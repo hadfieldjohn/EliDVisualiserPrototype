@@ -1,4 +1,4 @@
-# prototype_elid_visualiser
+# EliDVisualiserPrototype
 A slapped together prototype to render a bespoke campaign configuration object as a graph-based diagram.
 
 This code is unlikely to be of any use to you.  May not work correctly.  Is incredibly, horribly slapped together by a guy who hasn't coded for a living in over 15 years.
