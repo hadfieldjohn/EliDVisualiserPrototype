@@ -1,6 +1,9 @@
-# Getting Started with Create React App
+# prototype_elid_visualiser
+A slapped together prototype to render a bespoke campaign configuration object as a graph-based diagram.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This code is unlikely to be of any use to you.  May not work correctly.  Is incredibly, horribly slapped together by a guy who hasn't coded for a living in over 15 years.
+
+Please treat it accordingly.
 
 ## Available Scripts
 
@@ -15,6 +18,8 @@ The page will reload when you make changes.\
 You may also see any lint errors in the console.
 
 ### `npm test`
+
+No tests have yet been buit for this hacky prototype.  I'll burn in hell, I know.
 
 Launches the test runner in the interactive watch mode.\
 See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
