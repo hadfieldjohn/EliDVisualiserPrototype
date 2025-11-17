@@ -11,3 +11,75 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.react-flow__node-bigbox {
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
+}
+
+.react-flow__node-bigball {
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
+}
+
+.react-flow__node-decision {
+    border: 1px solid #777;
+    padding: 5px;
+    border-radius: 5px;
+    background: white;
+    width: 250px
+}
+
+.react-flow__node-decision label {
+    color: black;
+    font-size: 12px;
+    white-space: pre-wrap;
+}
+
+.react-flow__node-leftdecision {
+    border: 1px solid #777;
+    padding: 5px;
+    border-radius: 5px;
+    background: white;
+    width: 250px
+}
+
+.react-flow__node-leftdecision label {
+    color: black;
+    font-size: 12px;
+    white-space: pre-wrap;
+}
+
+.react-flow__node-topdecision {
+    border: 1px solid #777;
+    padding: 5px;
+    border-radius: 5px;
+    background: white;
+    width: 250px
+}
+
+.react-flow__node-topdecision label {
+    color: black;
+    font-size: 12px;
+    white-space: pre-wrap;
+}
+
+.react-flow__node-routingnode {
+    justify-content: center;
+    background: green;
+    width: 400px
+}
+
+.react-flow__node-routingnode label {
+    color: black;
+    font-size: 12px;
+    white-space: pre-wrap;
+}
