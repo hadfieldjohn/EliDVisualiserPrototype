@@ -1,6 +1,7 @@
 import './App.css';
 import ReactFlow, {MarkerType, MiniMap, Controls, Position, getRectOfNodes, getTransformForBounds} from "reactflow";
 import DecisionNode from "./DecisionNode";
+import MarkDownNode from "./MarkDownNode";
 import {useState} from "react";
 import Select from 'react-select';
 import {toPng} from "html-to-image";
@@ -8,7 +9,7 @@ import LeftDecisionNode from "./LeftDecisionNode";
 import TopDecisionNode from "./TopDecisionNode";
 import RoutingNode from "./RoutingNode";
 
-const nodeTypes = {decision: DecisionNode,leftdecision: LeftDecisionNode, topdecision: TopDecisionNode, routingnode: RoutingNode,};
+const nodeTypes = {markdown: MarkDownNode, decision: DecisionNode, leftdecision: LeftDecisionNode, topdecision: TopDecisionNode, routingnode: RoutingNode,};
 
 function App() {
 
@@ -125,6 +126,12 @@ function buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule) {
             myComparatorValue = myRule.Comparator.substring(0, 30) + (myRule.Comparator.length > 29 ? "..." : "");
         }
 
+        var myCohortLabel = "";
+        const cohortLabelList = myRule.CohortLabel ? myRule.CohortLabel.split(',') : null;
+        if (myRule.CohortLabel && myRule.CohortLabel !== "") {
+            myCohortLabel = cohortLabelList.slice(0,4).join('\n') + (cohortLabelList && cohortLabelList.length > 4 ? "(and more)" : "");
+        }
+
         if (myRule.AttributeLevel === "PERSON") {
             nodeLabel = nodeLabel + "\n(" + myRule.AttributeName + " " + myRule.Operator + " " + myComparatorValue + ")";
         } else if (myRule.AttributeLevel === "TARGET") {
@@ -133,8 +140,8 @@ function buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule) {
             nodeLabel = nodeLabel + "\n(" + myRule.Operator + " " + myRule.Comparator.substring(0, 50) + ")";
         }
 
-        if ( myRule.CohortLabel && myRule.CohortLabel !== "") {
-            nodeLabel = nodeLabel + "\n[" + myRule.CohortLabel + "]";
+        if ( myCohortLabel !== "") {
+            nodeLabel = nodeLabel + "\n[" + myCohortLabel + "]";
         }
     }
 
@@ -149,9 +156,9 @@ function buildRoutingLabel(CommsRouting, routingMap, showDetail ) {
     (CommsRouting + '|').split('|').forEach((rp) => {
         if (rp) {
            if ( routingMap && routingMap[rp] && showDetail) {
-               routingActions += rp + ' (' + routingMap[rp].ExternalRoutingCode + '/' + routingMap[rp].ActionType + ')|';
+               routingActions += rp + ' (' + routingMap[rp].ExternalRoutingCode + '/' + routingMap[rp].ActionType + ')~'+routingMap[rp].ActionDescription+'|';
             } else if (rp) {
-               routingActions += rp + '|';
+               routingActions += rp + '~|';
             }
         }
     })
@@ -235,7 +242,7 @@ function parseConfigRules(configJson,iteration,showDetail,showPriority) {
                         id: targetRPPrefix,
                         position: {x: nodeXOffset + (450 * ruleColumn), y: nodeYOffset + (ruleRow * 200) + 200},
                         data: {label: routingActions},
-                        type: "routingnode",
+                        type: "markdown",
                         targetPosition: Position.Top,
                         style: {
                             background: 'green',
@@ -372,7 +379,7 @@ console.log(lastRulePtr);
                     id: ruleId + myRule.Name,
                     position: {x: nodeXOffset + (450 * ruleColumn), y: nodeYOffset + (highestRuleClause * 200)},
                     data: {label: routingActions},
-                    type: "routingnode",
+                    type: "markdown",
                     targetPosition: Position.Top,
                     style: {
                         background: 'green',
