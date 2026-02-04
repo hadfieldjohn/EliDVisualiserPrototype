@@ -4,7 +4,6 @@ import remarkGfm from 'remark-gfm'
 import Collapsible from 'react-collapsible';
 
 export default function MarkDownNode({id, data}) {
-    const markdown = '# Hi, *Pluto*!';
 
     return (
         <div>
