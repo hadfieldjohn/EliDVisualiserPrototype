@@ -681,6 +681,6 @@ console.log(lastRulePtr);
 
 function buildLabel(iteration)
 {
-    return {"label": iteration.Name, "value": iteration.ID}
+    return {"label": iteration.Name + " ("+ iteration.IterationDate + ")", "value": iteration.ID}
 }
 export default App;
