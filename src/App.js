@@ -8,8 +8,11 @@ import {toPng} from "html-to-image";
 import LeftDecisionNode from "./LeftDecisionNode";
 import TopDecisionNode from "./TopDecisionNode";
 import RoutingNode from "./RoutingNode";
+import RuleStopIcon from "./icons/RuleStopIcon.tsx";
+import VirtualCohortIcon from "./icons/VirtualCohortIcon.tsx";
+import InputNode from "./InputNode";
 
-const nodeTypes = {markdown: MarkDownNode, decision: DecisionNode, leftdecision: LeftDecisionNode, topdecision: TopDecisionNode, routingnode: RoutingNode,};
+const nodeTypes = {markdown: MarkDownNode, decision: DecisionNode, leftdecision: LeftDecisionNode, topdecision: TopDecisionNode, routingnode: RoutingNode, inputnode: InputNode};
 
 function App() {
 
@@ -476,11 +479,12 @@ console.log(lastRulePtr);
 
         // Render cohorts
         for (let cohortPtr = 0; cohortPtr < myCohorts.length; cohortPtr++) {
+            var virtual = myCohorts[cohortPtr].Virtual && "Yy".indexOf(myCohorts[cohortPtr].Virtual) > -1;
             nodeJSON.push({
                 id: "CH_" + (cohortPtr + 1).toString(),
                 position: {x: (300 * cohortPtr), y: 0},
-                data: {label: myCohorts[cohortPtr].CohortLabel + (showPriority ? " (" + myCohorts[cohortPtr].Priority.toString() + ")" : "")},
-                type: "input",
+                data: {label: myCohorts[cohortPtr].CohortLabel + (showPriority ? " (" + myCohorts[cohortPtr].Priority.toString() + ")" : ""), icon: virtual ? <VirtualCohortIcon/> : ""},
+                type: "inputnode",
                 sourcePosition: Position.Bottom,
                 style: {
                     width: "250px",
@@ -531,6 +535,7 @@ console.log(lastRulePtr);
         for (let rulePtr = 0; rulePtr < myFandSRules.length; rulePtr++) {
 
             var myRule = myFandSRules[rulePtr];
+            var nextRule = myFandSRules[rulePtr+1] ? myFandSRules[rulePtr+1] : { Priority: -27 };
 
             var nodeLabel = buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule);
 
@@ -567,7 +572,7 @@ console.log(lastRulePtr);
             nodeJSON.push({
                 id: (rulePtr+1).toString(),
                 position: {x: (300 * colPtr), y: ruleYOffset + (ruleSpace * (clausePtr))},
-                data: {label: nodeLabel},
+                data: {label: nodeLabel, icon: myRule.Type === "S" && nextRule.Priority !== myRule.Priority && myRule.RuleStop && myRule.RuleStop === "Y" ? <RuleStopIcon /> : ""},
                 type: andRule ? "decision" : "leftdecision",
                 sourcePosition: Position.Bottom,
                 style: { width: "250px"}
@@ -577,24 +582,11 @@ console.log(lastRulePtr);
             // Connections are from last node (rulePtr) to this (rulePtr + 1)
             if (rulePtr > 0) {
 
-                if (lastRule.Type === "F" && !andRule) {
-                    edgeJSON.push({
-                        id: (rulePtr).toString() + "-Filtered",
-                        source: (rulePtr).toString(),
-                        target: "Filtered",
-                        label: "Y",
-                        sourceHandle: "Y",
-                        markerEnd: {
-                            type: MarkerType.ArrowClosed,
-                        }
-                    });
-                }
-
-                if (lastRule.Type === "S" && !andRule) {
+                if (!andRule) {
                     edgeJSON.push({
                         id: (rulePtr).toString() + "-Suppressed",
                         source: (rulePtr).toString(),
-                        target: "Suppressed",
+                        target: lastRule.Type === "F" ? "Filtered" : "Suppressed",
                         label: "Y",
                         sourceHandle: "Y",
                         markerEnd: {

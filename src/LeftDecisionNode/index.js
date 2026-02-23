@@ -5,6 +5,7 @@ export default function LeftDecisionNode({id, data}) {
     return(
         <div>
             <Handle type="target" id="TN" position={Position.Top}/>
+            {data.icon && <div className="icon">{data.icon}</div>}
             <div>
                <label>{data.label}</label>
             </div>

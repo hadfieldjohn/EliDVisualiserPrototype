@@ -4,6 +4,7 @@ export default function DecisionNode({id, data}) {
 
     return(
         <div>
+            {data.icon && <div className="icon">{data.icon}</div>}
             <div>
                <label>{data.label}</label>
             </div>
