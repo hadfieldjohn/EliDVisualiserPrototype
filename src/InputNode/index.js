@@ -1,9 +1,9 @@
-import { Handle, NodeProps, Position} from "reactflow";
+import { Handle, Position} from "reactflow";
 
 export default function InputNode({id, data}) {
 
     return(
-        <div>
+        <div id={id}>
             <div>
                 <label>
                     {data.icon && <div className="icon">{data.icon}{data.label}</div>}

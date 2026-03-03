@@ -1,4 +1,4 @@
-import {Handle, NodeProps, Position} from "reactflow";
+import {Handle, Position} from "reactflow";
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import Collapsible from 'react-collapsible';
@@ -6,7 +6,7 @@ import Collapsible from 'react-collapsible';
 export default function MarkDownNode({id, data}) {
 
     return (
-        <div>
+        <div id={id}>
             <Handle type="target" id="TN" position={Position.Top}/>
             <div>
                 <table>

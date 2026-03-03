@@ -1,9 +1,9 @@
-import { Handle, NodeProps, Position} from "reactflow";
+import { Handle, Position} from "reactflow";
 
 export default function DecisionNode({id, data}) {
 
     return(
-        <div>
+        <div id={id}>
             {data.icon && <div className="icon">{data.icon}</div>}
             <div>
                <label>{data.label}</label>
