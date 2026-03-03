@@ -18,19 +18,17 @@ function App() {
 
     const [showDetail, setShowDetail] = useState(false);
     const [showPriority, setShowPriority] = useState(false);
-    const [initialData, setInitialData] = useState(JSON.parse("{}"));
+    const [initialData, setInitialData] = useState({});
     const [iterationID, setIterationID] = useState("");
 
     const changeHandler = (event) => {
-
         if (event.target.files.length > 0 && event.target.files[0].name.endsWith(".json")) {
-
-            var fr = new FileReader();
+            const fr = new FileReader();
             fr.readAsText(event.target.files[0]);
             fr.onload = function (event) {
                 setInitialData(JSON.parse(event.target.result));
-                setIterationID({value:"0",label:"Please choose an interation..."});
-            }
+                setIterationID({value: "0", label: "Please choose an iteration..."});
+            };
         }
     };
 
@@ -42,21 +40,21 @@ function App() {
         setShowPriority(event.target.checked);
     };
 
-    const iterationChangeHandler = ( event) => {
+    const iterationChangeHandler = (event) => {
         setIterationID(event);
-        };
-
-    const downloadHandler = (event) => {
-      downloadDiagram(event,initialNodes,ruleHeight,ruleWidth);
     };
 
-    var parsedData = parseConfigRules(initialData,iterationID,showDetail,showPriority);
-    var initialNodes = parsedData.nodes;
-    var ruleHeight = parsedData.ruleHeight;
-    var ruleWidth = parsedData.ruleWidth;
-    var initialEdges = parsedData.edges;
-    var initialIterations = parsedData.iterations;
-    var initialIterationID = parsedData.iterationOption;
+    const downloadHandler = (event) => {
+        downloadDiagram(event, initialNodes, ruleHeight, ruleWidth);
+    };
+
+    const parsedData = parseConfigRules(initialData, iterationID, showDetail, showPriority);
+    const initialNodes = parsedData.nodes;
+    const ruleHeight = parsedData.ruleHeight;
+    const ruleWidth = parsedData.ruleWidth;
+    const initialEdges = parsedData.edges;
+    const initialIterations = parsedData.iterations;
+    const initialIterationID = parsedData.iterationOption;
 
     return (
         <div style={{width: "100vw", height: "100vh"}}>
@@ -82,24 +80,20 @@ function App() {
             </ReactFlow>
         </div>
     );
-
 }
 
 function downloadImage(dataUrl) {
     const a = document.createElement('a');
-
     a.setAttribute('download', 'vims_iteration.png');
     a.setAttribute('href', dataUrl);
     a.click();
 }
-function downloadDiagram(event,initialData,ruleHeight,ruleWidth) {
 
-    const imageWidth = (400 * ruleWidth)+300;
+function downloadDiagram(event, initialData, ruleHeight, ruleWidth) {
+    const imageWidth = (400 * ruleWidth) + 300;
     const imageHeight = 200 * ruleHeight;
-
     const nodesBounds = getRectOfNodes(initialData);
     const transform = getTransformForBounds(nodesBounds, imageWidth, imageHeight, 0.05, 2);
-
     toPng(document.querySelector('.react-flow__viewport'), {
         backgroundColor: 'white',
         width: imageWidth,
@@ -113,38 +107,57 @@ function downloadDiagram(event,initialData,ruleHeight,ruleWidth) {
 }
 
 function sortByKey(array, key) {
-    return array.sort(function(a, b) {
-        var x = a[key];
-        var y = b[key];
-        return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+    return array.sort((a, b) => {
+        const x = a[key];
+        const y = b[key];
+        return x < y ? -1 : x > y ? 1 : 0;
     });
 }
 
-function buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule) {
-    var nodeLabel = myRule.Name;
-    if (showDetail) {
+// Creates a ReactFlow edge with a standard closed arrow marker.
+function makeEdge(id, source, target, {label = "", sourceHandle, targetHandle} = {}) {
+    const edge = {id, source, target, label, markerEnd: {type: MarkerType.ArrowClosed}};
+    if (sourceHandle !== undefined) edge.sourceHandle = sourceHandle;
+    if (targetHandle !== undefined) edge.targetHandle = targetHandle;
+    return edge;
+}
 
-        var myComparatorValue = "";
+// Creates the green collapsible markdown node used to display a routing action plan.
+function makeRoutingActionNode(id, x, y, label) {
+    return {
+        id,
+        position: {x, y},
+        data: {label},
+        type: "markdown",
+        targetPosition: Position.Top,
+        style: {background: 'green', color: 'white', width: "400px", whitespace: 'pre-wrap'},
+    };
+}
+
+function buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule) {
+    let nodeLabel = myRule.Name;
+    if (showDetail) {
+        let myComparatorValue = "";
         if (myRule.Comparator) {
             myComparatorValue = myRule.Comparator.substring(0, 30) + (myRule.Comparator.length > 29 ? "..." : "");
         }
 
-        var myCohortLabel = "";
+        let myCohortLabel = "";
         const cohortLabelList = myRule.CohortLabel ? myRule.CohortLabel.split(',') : null;
         if (myRule.CohortLabel && myRule.CohortLabel !== "") {
-            myCohortLabel = cohortLabelList.slice(0,4).join('\n') + (cohortLabelList && cohortLabelList.length > 4 ? "(and more)" : "");
+            myCohortLabel = cohortLabelList.slice(0, 4).join('\n') + (cohortLabelList.length > 4 ? "(and more)" : "");
         }
 
         if (myRule.AttributeLevel === "PERSON") {
-            nodeLabel = nodeLabel + "\n(" + myRule.AttributeName + " " + myRule.Operator + " " + myComparatorValue + ")";
+            nodeLabel += "\n(" + myRule.AttributeName + " " + myRule.Operator + " " + myComparatorValue + ")";
         } else if (myRule.AttributeLevel === "TARGET") {
-            nodeLabel = nodeLabel + "\n(" + myRule.AttributeTarget + " " + myRule.AttributeName + " " + myRule.Operator + " " + myComparatorValue + ")";
+            nodeLabel += "\n(" + myRule.AttributeTarget + " " + myRule.AttributeName + " " + myRule.Operator + " " + myComparatorValue + ")";
         } else if (myRule.AttributeLevel === "COHORT") {
-            nodeLabel = nodeLabel + "\n(" + myRule.Operator + " " + myRule.Comparator.substring(0, 50) + ")";
+            nodeLabel += "\n(" + myRule.Operator + " " + myRule.Comparator.substring(0, 50) + ")";
         }
 
-        if ( myCohortLabel !== "") {
-            nodeLabel = nodeLabel + "\n[" + myCohortLabel + "]";
+        if (myCohortLabel !== "") {
+            nodeLabel += "\n[" + myCohortLabel + "]";
         }
     }
 
@@ -154,37 +167,32 @@ function buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule) {
     return nodeLabel;
 }
 
-function buildRoutingLabel(CommsRouting, routingMap, showDetail ) {
-    var routingActions = '';
-    (CommsRouting + '|').split('|').forEach((rp) => {
-        if (rp) {
-           if ( routingMap && routingMap[rp] && showDetail) {
-               routingActions += rp + ' (' + routingMap[rp].ExternalRoutingCode + '/' + routingMap[rp].ActionType + ')~'+routingMap[rp].ActionDescription+'|';
-            } else if (rp) {
-               routingActions += rp + '~|';
+function buildRoutingLabel(CommsRouting, routingMap, showDetail) {
+    return (CommsRouting + '|').split('|')
+        .filter(rp => rp)
+        .map(rp => {
+            if (routingMap && routingMap[rp] && showDetail) {
+                return rp + ' (' + routingMap[rp].ExternalRoutingCode + '/' + routingMap[rp].ActionType + ')~' + routingMap[rp].ActionDescription + '|';
             }
-        }
-    })
-    return routingActions;
+            return rp + '~|';
+        })
+        .join('');
 }
 
-function parseConfigRules(configJson,iteration,showDetail,showPriority) {
+function parseConfigRules(configJson, iteration, showDetail, showPriority) {
 
     const ruleSpace = 200;
 
-    var nodeJSON = [
+    const nodeJSON = [
         {
             id: "Suppressed",
-            position: {x: 600, y: ruleSpace*2},
+            position: {x: 600, y: ruleSpace * 2},
             data: {label: "Not Actionable"},
             type: "decision",
             targetPosition: Position.Left,
             sourcePosition: Position.Right,
             className: "react-flow__node-bigball",
-            style: {
-                background: 'orange',
-                color: 'white',
-            }
+            style: {background: 'orange', color: 'white'},
         },
         {
             id: "Filtered",
@@ -193,270 +201,169 @@ function parseConfigRules(configJson,iteration,showDetail,showPriority) {
             type: "decision",
             targetPosition: Position.Left,
             className: "react-flow__node-bigball",
-            style: {
-                background: 'red',
-                color: 'white',
-            },
+            style: {background: 'red', color: 'white'},
         },
         {
             id: "Action",
-            position: {x: 600, y: ruleSpace*3},
+            position: {x: 600, y: ruleSpace * 3},
             data: {label: "Actionable"},
             type: "decision",
             targetPosition: Position.Top,
             sourcePosition: Position.Right,
             className: "react-flow__node-bigbox",
-            style: {
-                background: 'green',
-                color: 'white',
-            },
+            style: {background: 'green', color: 'white'},
         }];
 
-    var edgeJSON = [{
-        id: "0-1", source: "0", target: "1",
-        markerEnd: {
-            type: MarkerType.ArrowClosed,
-        }
-    }];
+    const edgeJSON = [makeEdge("0-1", "0", "1")];
 
-    var iterationArrray = [{value:"0",label:"Please select file",}];
-    var iterationPtr = 0;
+    let iterationArrray = [{value: "0", label: "Please select file"}];
+    let iterationPtr = 0;
+
+    // Shared state accessed by nested functions and the return statement.
+    // Must be declared at function scope (not inside the if block) so nested
+    // function closures can reach them regardless of block scoping.
+    let myFandSRules = [];
+    let myCohorts = [];
+    let clausePtr = 0;
+    let filterClauseCount = 0;
+    let suppressionClauseCount = 0;
+    let maxColPtr = 0;
+    let maxCohortPtr = 0;
+    let ruleYOffset = 100;
+    let routingColMax = 0;
 
     function addDefaultRouting(selectedIterationPtr, routingType, routingNodeType, ruleColumn, ruleRow, lastRuleId, nodeXOffset, nodeYOffset, routingMap) {
-        //Handle the default comms routing for the iteration
-        var targetRPPrefix =  "DFRP_" + routingNodeType + "_";
+        const targetRPPrefix = "DFRP_" + routingNodeType + "_";
+        let routingPlan = null;
 
         if (configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting && configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting !== "") {
-            var routingPlan = "";
+            routingPlan = "";
             switch (routingType) {
-                case 'R' : routingPlan = configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting;
-                break;
-                case 'X' : routingPlan = configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultNotEligibleRouting;
-                break;
-                case 'Y' : routingPlan = configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultNotActionableRouting;
-                break;
+                case 'R': routingPlan = configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting; break;
+                case 'X': routingPlan = configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultNotEligibleRouting; break;
+                case 'Y': routingPlan = configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultNotActionableRouting; break;
                 default: routingPlan = "Unknown";
             }
 
             if (routingPlan && routingPlan !== '') {
-                var routingActions = buildRoutingLabel(routingPlan, routingMap, showDetail);
+                const routingActions = buildRoutingLabel(routingPlan, routingMap, showDetail);
                 if (routingActions) {
-                    nodeJSON.push({
-                        id: targetRPPrefix,
-                        position: {x: nodeXOffset + (450 * ruleColumn), y: nodeYOffset + (ruleRow * 200) + 200},
-                        data: {label: routingActions},
-                        type: "markdown",
-                        targetPosition: Position.Top,
-                        style: {
-                            background: 'green',
-                            color: 'white',
-                            width: "400px",
-                            whitespace: 'pre-wrap'
-                        }
-                    });
+                    nodeJSON.push(makeRoutingActionNode(
+                        targetRPPrefix,
+                        nodeXOffset + (450 * ruleColumn),
+                        nodeYOffset + (ruleRow * 200) + 200,
+                        routingActions,
+                    ));
                 }
             }
-        } else if ( routingType === 'R' ) {
-
+        } else if (routingType === 'R') {
             routingPlan = configJson.CampaignConfig.DefaultCommsRouting.replace(/\|/g, "\n");
-
             nodeJSON.push({
                 id: targetRPPrefix,
                 position: {x: -75, y: ruleYOffset + (ruleSpace * (clausePtr + 1))},
                 data: {label: routingPlan},
                 type: "output",
                 targetPosition: Position.Top,
-                style: {
-                    background: 'green',
-                    color: 'white',
-                    width: "400px",
-                    whitespace: 'pre-wrap'
-                }
+                style: {background: 'green', color: 'white', width: "400px", whitespace: 'pre-wrap'},
             });
-
         }
 
-        if ( routingPlan !== '') {
+        if (routingPlan) {
             if (ruleColumn > 1) {
-                edgeJSON.push({
-                    id: lastRuleId + "- " + targetRPPrefix,
-                    source: lastRuleId,
-                    target: targetRPPrefix,
-                    label: "else",
-                    sourceHandle: "RS",
-                    targetHandle: "T",
-                    markerEnd: {
-                        type: MarkerType.ArrowClosed,
-                    }
-                });
+                edgeJSON.push(makeEdge(lastRuleId + "- " + targetRPPrefix, lastRuleId, targetRPPrefix, {label: "else", sourceHandle: "RS", targetHandle: "T"}));
             } else {
-                edgeJSON.push({
-                    id: targetRPPrefix,
-                    source: routingNodeType,
-                    target: targetRPPrefix,
-                    label: "",
-                    sourceHandle: "Y",
-                    targetHandle: "T",
-                    markerEnd: {
-                        type: MarkerType.ArrowClosed,
-                    }
-                });
+                edgeJSON.push(makeEdge(targetRPPrefix, routingNodeType, targetRPPrefix, {sourceHandle: "Y", targetHandle: "T"}));
             }
 
-            if ( routingType === 'R' ) {
+            if (routingType === 'R') {
                 let lastRulePtr = myFandSRules.length;
                 do {
                     lastRulePtr--;
-                    edgeJSON.push({
-                        id: (lastRulePtr + 1).toString() + "- " + targetRPPrefix,
-                        source: (lastRulePtr + 1).toString(),
-                        target: 'Action',
-                        label: "N",
-                        markerEnd: {
-                            type: MarkerType.ArrowClosed,
-                        }
-                    });
-console.log(myFandSRules);
-console.log(lastRulePtr);
+                    edgeJSON.push(makeEdge((lastRulePtr + 1).toString() + "- " + targetRPPrefix, (lastRulePtr + 1).toString(), 'Action', {label: "N"}));
                 } while (lastRulePtr > -1 && (lastRulePtr === 0 || myFandSRules[lastRulePtr].Priority === myFandSRules[lastRulePtr - 1].Priority));
             }
         }
-
     }
 
     function addRoutingRules(selectedIterationPtr, routingRules, routingType, routingMap) {
 
-        const nodeTypes = { R: 'Action', X: 'Filtered', 'Y': 'Suppressed' };
+        const routingNodeTypes = {R: 'Action', X: 'Filtered', Y: 'Suppressed'};
 
-        const highestRuleClause = Math.max(...Object.values(routingRules.reduce( function (rules, rule) { rules[rule.Priority] = ++rules[rule.Priority] || 1; return rules; }, {} )));
+        const highestRuleClause = Math.max(...Object.values(routingRules.reduce((rules, rule) => {
+            rules[rule.Priority] = ++rules[rule.Priority] || 1;
+            return rules;
+        }, {})));
 
-        const anchorNode = nodeJSON.filter(function(node) { return node.id === nodeTypes[routingType];} )[0];
+        const anchorNode = nodeJSON.find(node => node.id === routingNodeTypes[routingType]);
         const rulePrefix = 'RP_' + routingType + '_';
         const nodeYOffset = anchorNode.position.y + 25;
         const nodeXOffset = anchorNode.position.x;
         let ruleColumn = 1;
-        var ruleRow = 0;
-        var maxRuleRow = 0;
-        var ruleId = '';
+        let ruleRow = 0;
+        let maxRuleRow = 0;
+        let ruleId = '';
 
         for (let rulePtr = 0; rulePtr < routingRules.length; rulePtr++) {
 
-            var myRule = routingRules[rulePtr];
-            var nextRule = rulePtr+1 < routingRules.length ? routingRules[rulePtr + 1] : { Type: "?", Priority: -98};
-            var lastRule = rulePtr > 0 ? routingRules[rulePtr - 1] : { Type: "?", Priority: -99};
-            var nodeLabel = buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule);
-            var andRuleNext = nextRule.Priority === myRule.Priority;
+            const myRule = routingRules[rulePtr];
+            const nextRule = rulePtr + 1 < routingRules.length ? routingRules[rulePtr + 1] : {Type: "?", Priority: -98};
+            const lastRule = rulePtr > 0 ? routingRules[rulePtr - 1] : {Type: "?", Priority: -99};
+            const nodeLabel = buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule);
+            const andRuleNext = nextRule.Priority === myRule.Priority;
 
             maxRuleRow = ruleRow > maxRuleRow ? ruleRow : maxRuleRow;
-            ruleId = rulePrefix + (rulePtr+1).toString();
+            ruleId = rulePrefix + (rulePtr + 1).toString();
 
-            // Render a routing rule
             nodeJSON.push({
                 id: ruleId,
                 position: {x: nodeXOffset + (450 * ruleColumn), y: nodeYOffset + (ruleRow * 200)},
                 data: {label: nodeLabel},
                 type: 'topdecision',
-                style: { width: "400px"}
+                style: {width: "400px"},
             });
 
-            // Set link from status node to the first rule
-            if ( rulePtr === 0 ) {
-                edgeJSON.push({
-                    id: nodeTypes[routingType] + "_" + rulePrefix + myRule.Name,
-                    source: nodeTypes[routingType],
-                    target: ruleId,
-                    targetHandle: "TL",
-                    sourceHandle: 'Y',
-                    markerEnd: {
-                        type: MarkerType.ArrowClosed,
-                    }
-                });
+            if (rulePtr === 0) {
+                edgeJSON.push(makeEdge(routingNodeTypes[routingType] + "_" + rulePrefix + myRule.Name, routingNodeTypes[routingType], ruleId, {targetHandle: "TL", sourceHandle: 'Y'}));
             }
 
-            var routingActions = buildRoutingLabel(myRule.CommsRouting, routingMap, showDetail);
+            const routingActions = buildRoutingLabel(myRule.CommsRouting, routingMap, showDetail);
 
-            // If no and clauses to follow, then render the action plan
-            if ( !andRuleNext && routingActions) {
+            if (!andRuleNext && routingActions) {
 
-                nodeJSON.push({
-                    id: ruleId + myRule.Name,
-                    position: {x: nodeXOffset + (450 * ruleColumn), y: nodeYOffset + (highestRuleClause * 200)},
-                    data: {label: routingActions},
-                    type: "markdown",
-                    targetPosition: Position.Top,
-                    style: {
-                        background: 'green',
-                        color: 'white',
-                        width: "400px",
-                        whitespace: 'pre-wrap'
-                    }
-                });
+                nodeJSON.push(makeRoutingActionNode(
+                    ruleId + myRule.Name,
+                    nodeXOffset + (450 * ruleColumn),
+                    nodeYOffset + (highestRuleClause * 200),
+                    routingActions,
+                ));
 
-                // Connect the non-and rule to the routing plan
-               edgeJSON.push({
-                    id: (rulePtr+1).toString() + rulePrefix + myRule.Name,
-                    source: rulePrefix + (rulePtr+1).toString(),
-                    target: rulePrefix + (rulePtr+1) + myRule.Name,
-                    label: "Then",
-                    sourceHandle: "B",
-                    targetHandle: "T",
-                    markerEnd: {
-                        type: MarkerType.ArrowClosed,
-                    }
-                });
+                edgeJSON.push(makeEdge((rulePtr + 1).toString() + rulePrefix + myRule.Name, rulePrefix + (rulePtr + 1).toString(), rulePrefix + (rulePtr + 1) + myRule.Name, {label: "Then", sourceHandle: "B", targetHandle: "T"}));
 
-               //Connect the non-and rule to the next routing rule if there is one
-               if ( nextRule.Type !== '?' ) {
-                   edgeJSON.push({
-                       id: ruleId + myRule.Name,
-                       source: ruleId,
-                       target: rulePrefix + (rulePtr+2).toString(),
-                       label: "No",
-                       sourceHandle: "RS",
-                       targetHandle: "TL",
-                       markerEnd: {
-                           type: MarkerType.ArrowClosed,
-                       }
-                   });
-               }
+                if (nextRule.Type !== '?') {
+                    edgeJSON.push(makeEdge(ruleId + myRule.Name, ruleId, rulePrefix + (rulePtr + 2).toString(), {label: "No", sourceHandle: "RS", targetHandle: "TL"}));
+                }
 
                 ruleRow = 0;
                 ruleColumn++;
 
             } else {
-
-                edgeJSON.push({
-                    id: (rulePtr).toString() + rulePrefix + myRule.Name,
-                    source: rulePrefix + (rulePtr+1).toString(),
-                    target: rulePrefix + (rulePtr+2).toString(),
-                    label: "And",
-                    sourceHandle: "B",
-                    targetHandle: "T",
-                    markerEnd: {
-                        type: MarkerType.ArrowClosed,
-                    }
-                });
+                edgeJSON.push(makeEdge((rulePtr).toString() + rulePrefix + myRule.Name, rulePrefix + (rulePtr + 1).toString(), rulePrefix + (rulePtr + 2).toString(), {label: "And", sourceHandle: "B", targetHandle: "T"}));
                 ruleRow++;
             }
-
         }
 
-        addDefaultRouting(iterationPtr,routingType,nodeTypes[routingType],ruleColumn,maxRuleRow,ruleId,nodeXOffset,nodeYOffset,routingMap);
+        addDefaultRouting(iterationPtr, routingType, routingNodeTypes[routingType], ruleColumn, maxRuleRow, ruleId, nodeXOffset, nodeYOffset, routingMap);
 
-        return [ ruleColumn, maxRuleRow+1 ];
-
+        return [ruleColumn, maxRuleRow + 1];
     }
 
     function adjustFilterSuppressActionNodes() {
-        //Adjust Filtered/Suppress Columns
         for (let nodePtr = 0; nodePtr < nodeJSON.length; nodePtr++) {
             if (nodeJSON[nodePtr].id === "Filtered") {
                 nodeJSON[nodePtr].position.x = (maxColPtr * 300) + 500;
-                if ( filterClauseCount !== 1 ) {
-                    nodeJSON[nodePtr].position.y = (filterClauseCount * ruleSpace) / 2;
-                } else {
-                    nodeJSON[nodePtr].position.y = (2 * ruleSpace) / 2 + 40;
-                }
+                nodeJSON[nodePtr].position.y = filterClauseCount !== 1
+                    ? (filterClauseCount * ruleSpace) / 2
+                    : (2 * ruleSpace) / 2 + 40;
             }
 
             if (nodeJSON[nodePtr].id === "Suppressed") {
@@ -466,7 +373,7 @@ console.log(lastRulePtr);
 
             if (nodeJSON[nodePtr].id === "Action") {
                 nodeJSON[nodePtr].position.x = (maxColPtr * 300) + 500;
-                nodeJSON[nodePtr].position.y = ((filterClauseCount * ruleSpace) + (suppressionClauseCount * ruleSpace) + ruleSpace + 40);
+                nodeJSON[nodePtr].position.y = (filterClauseCount * ruleSpace) + (suppressionClauseCount * ruleSpace) + ruleSpace + 40;
             }
 
             if (nodeJSON[nodePtr].id.substring(0, 3) === "RP_") {
@@ -476,83 +383,57 @@ console.log(lastRulePtr);
     }
 
     function addInputCohorts() {
-
-        // Render cohorts
         for (let cohortPtr = 0; cohortPtr < myCohorts.length; cohortPtr++) {
-            var virtual = myCohorts[cohortPtr].Virtual && "Yy".indexOf(myCohorts[cohortPtr].Virtual) > -1;
+            const virtual = myCohorts[cohortPtr].Virtual && "Yy".indexOf(myCohorts[cohortPtr].Virtual) > -1;
             nodeJSON.push({
                 id: "CH_" + (cohortPtr + 1).toString(),
                 position: {x: (300 * cohortPtr), y: 0},
-                data: {label: myCohorts[cohortPtr].CohortLabel + (showPriority ? " (" + myCohorts[cohortPtr].Priority.toString() + ")" : ""), icon: virtual ? <VirtualCohortIcon/> : ""},
+                data: {
+                    label: myCohorts[cohortPtr].CohortLabel + (showPriority ? " (" + myCohorts[cohortPtr].Priority.toString() + ")" : ""),
+                    icon: virtual ? <VirtualCohortIcon/> : "",
+                },
                 type: "inputnode",
                 sourcePosition: Position.Bottom,
-                style: {
-                    width: "250px",
-                    background: 'blue',
-                    color: 'white',
-                }
+                style: {width: "250px", background: 'blue', color: 'white'},
             });
-            edgeJSON.push({
-                id: "CH_" + (cohortPtr + 1).toString() + "-Start",
-                source: "CH_" + (cohortPtr + 1).toString(),
-                target: "1",
-                markerEnd: {
-                    type: MarkerType.ArrowClosed,
-                }
-            });
+            edgeJSON.push(makeEdge("CH_" + (cohortPtr + 1).toString() + "-Start", "CH_" + (cohortPtr + 1).toString(), "1"));
             maxCohortPtr++;
         }
     }
 
-    if ( configJson.hasOwnProperty("CampaignConfig") ) {
+    if (configJson.hasOwnProperty("CampaignConfig")) {
 
-        //Extract iterations if more than one
         iterationArrray = configJson.CampaignConfig.Iterations.map(buildLabel);
 
-        if ( iteration.value !== "" && iteration.value !== "0") {
+        if (iteration.value !== "" && iteration.value !== "0") {
             iterationPtr = configJson.CampaignConfig.Iterations.findIndex(p => p.ID === iteration.value);
         }
 
-        var myFandSRules = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationRules,'Priority').filter(function (rl) { return ['F','S'].includes(rl.Type)});
-        var myRRules = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationRules,'Priority').filter(function (rl) { return rl.Type === 'R'});
-        var myXRules = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationRules,'Priority').filter(function (rl) { return rl.Type === 'X'});
-        var myYRules = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationRules,'Priority').filter(function (rl) { return rl.Type === 'Y'});
-        var myRoutingMap = configJson.CampaignConfig.Iterations[iterationPtr].ActionsMapper;
+        myFandSRules = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationRules, 'Priority').filter(rl => ['F', 'S'].includes(rl.Type));
+        const myRRules = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationRules, 'Priority').filter(rl => rl.Type === 'R');
+        const myXRules = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationRules, 'Priority').filter(rl => rl.Type === 'X');
+        const myYRules = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationRules, 'Priority').filter(rl => rl.Type === 'Y');
+        const myRoutingMap = configJson.CampaignConfig.Iterations[iterationPtr].ActionsMapper;
 
-        var myCohorts = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationCohorts,'Priority');
-        var clausePtr = 0;
-        var filterClauseCount = 0;
-        var suppressionClauseCount = 0;
-        var colPtr = 0;
-        var andRule= false;
-        var maxColPtr = 0;
-        var maxCohortPtr = 0;
-        var ruleYOffset = 100;
-        var routingColMax;
+        myCohorts = sortByKey(configJson.CampaignConfig.Iterations[iterationPtr].IterationCohorts, 'Priority');
+        let colPtr = 0;
+        let andRule = false;
+        let lastRule = {Type: null, Priority: null};
+        let lastRulePtr = 0;
 
         addInputCohorts();
 
         for (let rulePtr = 0; rulePtr < myFandSRules.length; rulePtr++) {
 
-            var myRule = myFandSRules[rulePtr];
-            var nextRule = myFandSRules[rulePtr+1] ? myFandSRules[rulePtr+1] : { Priority: -27 };
-
-            var nodeLabel = buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule);
+            const myRule = myFandSRules[rulePtr];
+            const nextRule = myFandSRules[rulePtr + 1] ? myFandSRules[rulePtr + 1] : {Priority: -27};
+            const nodeLabel = buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule);
 
             if (rulePtr === 0 || myRule.Type !== lastRule.Type || myRule.Priority !== lastRule.Priority) {
 
-                // Tie up loose ends from ands by adding N's
                 if (andRule) {
-                    for ( var nPtr = colPtr; nPtr > 0; nPtr--) {
-                        edgeJSON.push({
-                            id: (rulePtr-nPtr).toString() + "-" + (rulePtr + 1).toString(),
-                            source: (rulePtr-nPtr).toString(),
-                            target: (rulePtr + 1).toString(),
-                            label: "N",
-                            markerEnd: {
-                                type: MarkerType.ArrowClosed,
-                            }
-                        });
+                    for (let nPtr = colPtr; nPtr > 0; nPtr--) {
+                        edgeJSON.push(makeEdge((rulePtr - nPtr).toString() + "-" + (rulePtr + 1).toString(), (rulePtr - nPtr).toString(), (rulePtr + 1).toString(), {label: "N"}));
                     }
                 }
 
@@ -560,9 +441,8 @@ console.log(lastRulePtr);
                 clausePtr++;
                 andRule = false;
 
-                if ( myRule.Type === "S") suppressionClauseCount++;
-                if ( myRule.Type === "F") filterClauseCount++;
-
+                if (myRule.Type === "S") suppressionClauseCount++;
+                if (myRule.Type === "F") filterClauseCount++;
 
             } else if (myRule.Type === lastRule.Type && myRule.Priority === lastRule.Priority) {
                 colPtr++;
@@ -570,109 +450,65 @@ console.log(lastRulePtr);
             }
 
             nodeJSON.push({
-                id: (rulePtr+1).toString(),
-                position: {x: (300 * colPtr), y: ruleYOffset + (ruleSpace * (clausePtr))},
-                data: {label: nodeLabel, icon: myRule.Type === "S" && nextRule.Priority !== myRule.Priority && myRule.RuleStop && myRule.RuleStop === "Y" ? <RuleStopIcon /> : ""},
+                id: (rulePtr + 1).toString(),
+                position: {x: (300 * colPtr), y: ruleYOffset + (ruleSpace * clausePtr)},
+                data: {
+                    label: nodeLabel,
+                    icon: myRule.Type === "S" && nextRule.Priority !== myRule.Priority && myRule.RuleStop && myRule.RuleStop === "Y" ? <RuleStopIcon/> : "",
+                },
                 type: andRule ? "decision" : "leftdecision",
                 sourcePosition: Position.Bottom,
-                style: { width: "250px"}
+                style: {width: "250px"},
             });
 
-
-            // Connections are from last node (rulePtr) to this (rulePtr + 1)
             if (rulePtr > 0) {
 
                 if (!andRule) {
-                    edgeJSON.push({
-                        id: (rulePtr).toString() + "-Suppressed",
-                        source: (rulePtr).toString(),
-                        target: lastRule.Type === "F" ? "Filtered" : "Suppressed",
-                        label: "Y",
-                        sourceHandle: "Y",
-                        markerEnd: {
-                            type: MarkerType.ArrowClosed,
-                        }
-                    });
+                    edgeJSON.push(makeEdge((rulePtr).toString() + "-Suppressed", (rulePtr).toString(), lastRule.Type === "F" ? "Filtered" : "Suppressed", {label: "Y", sourceHandle: "Y"}));
                 }
 
-                //Not the last rule
                 if (rulePtr < myFandSRules.length) {
                     if (andRule) {
-                        edgeJSON.push({
-                            id: (rulePtr).toString() + "-" + (rulePtr + 1).toString(),
-                            source: (rulePtr).toString(),
-                            target: (rulePtr + 1).toString(),
-                            label: "And",
-                            sourceHandle: "Y",
-                            targetHandle: "TY",
-                            markerEnd: {
-                                type: MarkerType.ArrowClosed,
-                            }
-                        });
+                        edgeJSON.push(makeEdge((rulePtr).toString() + "-" + (rulePtr + 1).toString(), (rulePtr).toString(), (rulePtr + 1).toString(), {label: "And", sourceHandle: "Y", targetHandle: "TY"}));
                     } else {
-                    edgeJSON.push({
-                        id: (rulePtr).toString() + "-" + (rulePtr + 1).toString(),
-                        source: (rulePtr).toString(),
-                        target: (rulePtr + 1).toString(),
-                        label: "N",
-                        markerEnd: {
-                            type: MarkerType.ArrowClosed,
-                        }
-                    });
+                        edgeJSON.push(makeEdge((rulePtr).toString() + "-" + (rulePtr + 1).toString(), (rulePtr).toString(), (rulePtr + 1).toString(), {label: "N"}));
                     }
                 }
             }
 
-            var lastRule = myRule;
-            var lastRulePtr = rulePtr;
+            lastRule = myRule;
+            lastRulePtr = rulePtr;
             if (colPtr > maxColPtr) maxColPtr = colPtr;
         }
 
-        // Tidy up a dangling filter or suppression
-        if (lastRule.Type === "F") {
-            edgeJSON.push({
-                id: (lastRulePtr).toString() + "-Filtered",
-                source: (lastRulePtr).toString(),
-                target: "Filtered",
-                label: "Y",
-                sourceHandle: "Y",
-                markerEnd: {
-                    type: MarkerType.ArrowClosed,
-                }
-            });
+        if (lastRule && lastRule.Type === "F") {
+            edgeJSON.push(makeEdge((lastRulePtr).toString() + "-Filtered", (lastRulePtr).toString(), "Filtered", {label: "Y", sourceHandle: "Y"}));
         }
 
-        if (lastRule.Type === "S") {
-            edgeJSON.push({
-                id: (lastRulePtr+1).toString() + "-Suppressed",
-                source: (lastRulePtr+1).toString(),
-                target: "Suppressed",
-                label: "Y",
-                sourceHandle: "Y",
-                markerEnd: {
-                    type: MarkerType.ArrowClosed,
-                }
-            });
+        if (lastRule && lastRule.Type === "S") {
+            edgeJSON.push(makeEdge((lastRulePtr + 1).toString() + "-Suppressed", (lastRulePtr + 1).toString(), "Suppressed", {label: "Y", sourceHandle: "Y"}));
         }
 
         adjustFilterSuppressActionNodes();
 
-        const [colsR, rowsR] = addRoutingRules(iterationPtr,myRRules,'R',myRoutingMap);
-        const [colsX, rowsX] = addRoutingRules(iterationPtr,myXRules,'X',myRoutingMap);
-        const [colsY, rowsY] = addRoutingRules(iterationPtr,myYRules,'Y',myRoutingMap);
-        routingColMax = Math.max(colsR,colsX,colsY);
+        const [colsR] = addRoutingRules(iterationPtr, myRRules, 'R', myRoutingMap);
+        const [colsX] = addRoutingRules(iterationPtr, myXRules, 'X', myRoutingMap);
+        const [colsY] = addRoutingRules(iterationPtr, myYRules, 'Y', myRoutingMap);
+        routingColMax = Math.max(colsR, colsX, colsY);
     }
 
-    return {nodes: nodeJSON,
-            edges:edgeJSON,
-            iterations:iterationArrray,
-            iterationOption:iterationArrray[iterationPtr],
-            ruleHeight:(clausePtr+1),
-            ruleWidth:((maxCohortPtr>(maxColPtr + routingColMax)?maxCohortPtr:maxColPtr + routingColMax + 3)+1)};
+    return {
+        nodes: nodeJSON,
+        edges: edgeJSON,
+        iterations: iterationArrray,
+        iterationOption: iterationArrray[iterationPtr],
+        ruleHeight: clausePtr + 1,
+        ruleWidth: (maxCohortPtr > (maxColPtr + routingColMax) ? maxCohortPtr : maxColPtr + routingColMax + 3) + 1,
+    };
 }
 
-function buildLabel(iteration)
-{
-    return {"label": iteration.Name + " ("+ iteration.IterationDate + ")", "value": iteration.ID}
+function buildLabel(iteration) {
+    return {label: iteration.Name + " (" + iteration.IterationDate + ")", value: iteration.ID};
 }
+
 export default App;
