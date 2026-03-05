@@ -18,6 +18,7 @@ function App() {
 
     const [showDetail, setShowDetail] = useState(false);
     const [showPriority, setShowPriority] = useState(false);
+    const [showDescription, setShowDescription] = useState(false);
     const [initialData, setInitialData] = useState({});
     const [iterationID, setIterationID] = useState("");
 
@@ -40,6 +41,10 @@ function App() {
         setShowPriority(event.target.checked);
     };
 
+    const descriptionChangeHandler = (event) => {
+        setShowDescription(event.target.checked);
+    };
+
     const iterationChangeHandler = (event) => {
         setIterationID(event);
     };
@@ -48,7 +53,7 @@ function App() {
         downloadDiagram(event, initialNodes, ruleHeight, ruleWidth);
     };
 
-    const parsedData = parseConfigRules(initialData, iterationID, showDetail, showPriority);
+    const parsedData = parseConfigRules(initialData, iterationID, showDetail, showPriority, showDescription);
     const initialNodes = parsedData.nodes;
     const ruleHeight = parsedData.ruleHeight;
     const ruleWidth = parsedData.ruleWidth;
@@ -65,6 +70,8 @@ function App() {
                 <input type={"checkbox"} onChange={detailChangeHandler}/>
                 <label>Show Priority</label>
                 <input type={"checkbox"} onChange={priorityChangeHandler}/>
+                <label>Show Description</label>
+                <input type={"checkbox"} onChange={descriptionChangeHandler}/>
                 <button type={"button"} onClick={downloadHandler}>Download PNG</button>
                 <Select className="basic-single"
                         classNamePrefix="select"
@@ -134,8 +141,16 @@ function makeRoutingActionNode(id, x, y, label) {
     };
 }
 
-function buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule) {
-    let nodeLabel = myRule.Name;
+function buildNodeLabel(myRule, showDetail, showPriority, showDescription, rulePtr, lastRule, andRule) {
+
+    console.log(myRule.Type, myRule, andRule);
+
+    let nodeLabel = (andRule && showDescription ? "" : myRule.Name) + "\\";
+
+    if (showDescription) {
+        nodeLabel = nodeLabel + myRule.Description.substring(0,100) + (myRule.Description.length > 100 ? "..." : "") + '\\';
+    }
+
     if (showDetail) {
         let myComparatorValue = "";
         if (myRule.Comparator) {
@@ -180,7 +195,7 @@ function buildRoutingLabel(CommsRouting, routingMap, showDetail) {
         .join('');
 }
 
-function parseConfigRules(configJson, iteration, showDetail, showPriority) {
+function parseConfigRules(configJson, iteration, showDetail, showPriority, showDescription) {
 
     const ruleSpace = 200;
 
@@ -309,8 +324,11 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority) {
             const myRule = routingRules[rulePtr];
             const nextRule = rulePtr + 1 < routingRules.length ? routingRules[rulePtr + 1] : {Type: "?", Priority: -98};
             const lastRule = rulePtr > 0 ? routingRules[rulePtr - 1] : {Type: "?", Priority: -99};
-            const nodeLabel = buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule);
             const andRuleNext = nextRule.Priority === myRule.Priority;
+            const andRule = lastRule.Priority === myRule.Priority;
+
+            const nodeLabel = buildNodeLabel(myRule, showDetail, showPriority, showDescription, rulePtr, lastRule, andRule);
+
 
             maxRuleRow = ruleRow > maxRuleRow ? ruleRow : maxRuleRow;
             ruleId = rulePrefix + (rulePtr + 1).toString();
@@ -428,7 +446,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority) {
 
             const myRule = myFandSRules[rulePtr];
             const nextRule = myFandSRules[rulePtr + 1] ? myFandSRules[rulePtr + 1] : {Priority: -27};
-            const nodeLabel = buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule);
+            const nodeLabel = buildNodeLabel(myRule, showDetail, showPriority, showDescription, rulePtr, lastRule, rulePtr !== 0 && myRule.Priority === lastRule.Priority);
 
             if (rulePtr === 0 || myRule.Type !== lastRule.Type || myRule.Priority !== lastRule.Priority) {
 
