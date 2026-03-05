@@ -530,4 +530,5 @@ function buildLabel(iteration) {
     return {label: iteration.Name + " (" + iteration.IterationDate + ")", value: iteration.ID};
 }
 
+export { sortByKey, buildNodeLabel, buildRoutingLabel, parseConfigRules };
 export default App;
