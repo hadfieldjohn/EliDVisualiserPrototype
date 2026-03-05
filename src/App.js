@@ -21,13 +21,62 @@ const nodeTypes = {
     inputnode: InputNode
 };
 
+/**
+ * @typedef {Object} IterationRule
+ * @property {string}  Name
+ * @property {'F'|'S'|'R'|'X'|'Y'} Type
+ * @property {number}  Priority
+ * @property {string}  [Comparator]
+ * @property {string}  [CohortLabel]
+ * @property {'PERSON'|'TARGET'|'COHORT'} [AttributeLevel]
+ * @property {string}  [AttributeName]
+ * @property {string}  [AttributeTarget]
+ * @property {string}  [Operator]
+ * @property {string}  [CommsRouting]
+ * @property {'Y'|'N'} [RuleStop]
+ */
+
+/**
+ * @typedef {Object} RoutingAction
+ * @property {string} ExternalRoutingCode
+ * @property {string} ActionType
+ * @property {string} ActionDescription
+ */
+
+/**
+ * @typedef {Object} IterationCohort
+ * @property {string} CohortLabel
+ * @property {number} Priority
+ * @property {string} [Virtual]
+ */
+
+/**
+ * @typedef {Object} Iteration
+ * @property {string}           ID
+ * @property {string}           Name
+ * @property {string}           IterationDate
+ * @property {IterationRule[]}  IterationRules
+ * @property {IterationCohort[]} IterationCohorts
+ * @property {string}           [DefaultCommsRouting]
+ * @property {string}           [DefaultNotEligibleRouting]
+ * @property {string}           [DefaultNotActionableRouting]
+ * @property {Object.<string, RoutingAction>} [ActionsMapper]
+ */
+
+/**
+ * @typedef {Object} ConfigJson
+ * @property {{ Iterations: Iteration[], DefaultCommsRouting: string }} [CampaignConfig]
+ */
+
 function App() {
 
     const [showDetail, setShowDetail] = useState(false);
     const [showPriority, setShowPriority] = useState(false);
     const [showDescription, setShowDescription] = useState(false);
     const [initialData, setInitialData] = useState({});
-    const [iterationID, setIterationID] = useState("");
+    const [iterationID, setIterationID] = useState({value:"0",label:""});
+    const [nodeWidth, setNodeWidth] = useState(250);
+    const [nodeHeight, setNodeHeight] = useState(200);
 
     const changeHandler = (event) => {
         if (event.target.files.length > 0 && event.target.files[0].name.endsWith(".json")) {
@@ -56,11 +105,19 @@ function App() {
         setIterationID(event);
     };
 
-    const downloadHandler = (event) => {
-        downloadDiagram(event, initialNodes, ruleHeight, ruleWidth);
+    const nodeWidthChangeHandler = (event) => {
+        setNodeWidth(Number(event.target.value));
     };
 
-    const parsedData = parseConfigRules(initialData, iterationID, showDetail, showPriority, showDescription);
+    const nodeHeightChangeHandler = (event) => {
+        setNodeHeight(Number(event.target.value));
+    };
+
+    const downloadHandler = (event) => {
+        downloadDiagram(event, initialNodes, ruleHeight, ruleWidth, nodeWidth, nodeHeight);
+    };
+
+    const parsedData = parseConfigRules(initialData, iterationID, showDetail, showPriority, nodeWidth, nodeHeight, showDescription);
     const initialNodes = parsedData.nodes;
     const ruleHeight = parsedData.ruleHeight;
     const ruleWidth = parsedData.ruleWidth;
@@ -79,6 +136,12 @@ function App() {
                 <input type={"checkbox"} onChange={priorityChangeHandler}/>
                 <label>Show Description</label>
                 <input type={"checkbox"} onChange={descriptionChangeHandler}/>
+                <label>Node Width</label>
+                <input type="range" min="150" max="500" value={nodeWidth} onChange={nodeWidthChangeHandler}/>
+                <span>{nodeWidth}px</span>
+                <label>Node Height</label>
+                <input type="range" min="100" max="400" value={nodeHeight} onChange={nodeHeightChangeHandler}/>
+                <span>{nodeHeight}px</span>
                 <button type={"button"} onClick={downloadHandler}>Download PNG</button>
                 <Select className="basic-single"
                         classNamePrefix="select"
@@ -103,9 +166,10 @@ function downloadImage(dataUrl) {
     a.click();
 }
 
-function downloadDiagram(event, initialData, ruleHeight, ruleWidth) {
-    const imageWidth = (400 * ruleWidth) + 300;
-    const imageHeight = 200 * ruleHeight;
+function downloadDiagram(event, initialData, ruleHeight, ruleWidth, nodeWidth, nodeHeight) {
+    const largeWidth = Math.round(nodeWidth * 8 / 5);
+    const imageWidth = (largeWidth * ruleWidth) + 300;
+    const imageHeight = nodeHeight * ruleHeight;
     const nodesBounds = getRectOfNodes(initialData);
     const transform = getTransformForBounds(nodesBounds, imageWidth, imageHeight, 0.05, 2);
     toPng(document.querySelector('.react-flow__viewport'), {
@@ -137,20 +201,28 @@ function makeEdge(id, source, target, {label = "", sourceHandle, targetHandle} =
 }
 
 // Creates the green collapsible markdown node used to display a routing action plan.
-function makeRoutingActionNode(id, x, y, label) {
+function makeRoutingActionNode(id, x, y, label, width) {
     return {
         id,
         position: {x, y},
         data: {label},
         type: "markdown",
         targetPosition: Position.Top,
-        style: {background: 'green', color: 'white', width: "400px", whitespace: 'pre-wrap'},
+        style: {background: 'green', color: 'white', width: width + "px", whitespace: 'pre-wrap'},
     };
 }
 
+/**
+ * @param {IterationRule} myRule
+ * @param {boolean} showDetail
+ * @param {boolean} showPriority
+ * @param {boolean} showDescription
+ * @param {number} rulePtr
+ * @param {IterationRule} lastRule
+ * @param {boolean} lastRule
+ * @param {boolean} andRule
+ */
 function buildNodeLabel(myRule, showDetail, showPriority, showDescription, rulePtr, lastRule, andRule) {
-
-    console.log(myRule.Type, myRule, andRule);
 
     let nodeLabel = (andRule && showDescription ? "" : myRule.Name) + "\\";
 
@@ -189,6 +261,11 @@ function buildNodeLabel(myRule, showDetail, showPriority, showDescription, ruleP
     return nodeLabel;
 }
 
+/**
+ * @param {string} CommsRouting
+ * @param {Object.<string, RoutingAction>} routingMap
+ * @param {boolean} showDetail
+ */
 function buildRoutingLabel(CommsRouting, routingMap, showDetail) {
     if (!CommsRouting) return '';
     return (CommsRouting + '|').split('|')
@@ -202,9 +279,23 @@ function buildRoutingLabel(CommsRouting, routingMap, showDetail) {
         .join('');
 }
 
-function parseConfigRules(configJson, iteration, showDetail, showPriority, showDescription) {
+/**
+ * @param {ConfigJson} configJson
+ * @param {{value: string, label: string}|string} iteration
+ * @param {boolean} showDetail
+ * @param {boolean} showPriority
+ * @param {number} nodeWidth
+ * @param {number} nodeHeight
+ * @param {boolean} showDescription
+ */
+function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeWidth, nodeHeight, showDescription) {
 
-    const ruleSpace = 200;
+    const smallWidth = nodeWidth;
+    const largeWidth = Math.round(nodeWidth * 8 / 5);
+    const smallColPitch = smallWidth + 50;
+    const largeColPitch = largeWidth + 50;
+
+    const ruleSpace = nodeHeight;
 
     const nodeJSON = [
         {
@@ -280,9 +371,10 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, showD
                 if (routingActions) {
                     nodeJSON.push(makeRoutingActionNode(
                         targetRPPrefix,
-                        nodeXOffset + (450 * ruleColumn),
-                        nodeYOffset + (ruleRow * 200) + 200,
+                        nodeXOffset + (largeColPitch * ruleColumn),
+                        nodeYOffset + (ruleRow * ruleSpace) + ruleSpace,
                         routingActions,
+                        largeWidth,
                     ));
                 }
             }
@@ -294,7 +386,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, showD
                 data: {label: routingPlan},
                 type: "output",
                 targetPosition: Position.Top,
-                style: {background: 'green', color: 'white', width: "400px", whitespace: 'pre-wrap'},
+                style: {background: 'green', color: 'white', width: largeWidth + "px", whitespace: 'pre-wrap'},
             });
         }
 
@@ -356,10 +448,10 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, showD
 
             nodeJSON.push({
                 id: ruleId,
-                position: {x: nodeXOffset + (450 * ruleColumn), y: nodeYOffset + (ruleRow * 200)},
+                position: {x: nodeXOffset + (largeColPitch * ruleColumn), y: nodeYOffset + (ruleRow * ruleSpace)},
                 data: {label: nodeLabel},
                 type: 'topdecision',
-                style: {width: "400px"},
+                style: {width: largeWidth + "px"},
             });
 
             if (rulePtr === 0) {
@@ -375,9 +467,10 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, showD
 
                 nodeJSON.push(makeRoutingActionNode(
                     ruleId + myRule.Name,
-                    nodeXOffset + (450 * ruleColumn),
-                    nodeYOffset + (highestRuleClause * 200),
+                    nodeXOffset + (largeColPitch * ruleColumn),
+                    nodeYOffset + (highestRuleClause * ruleSpace),
                     routingActions,
+                    largeWidth,
                 ));
 
                 edgeJSON.push(makeEdge((rulePtr + 1).toString() + rulePrefix + myRule.Name, rulePrefix + (rulePtr + 1).toString(), rulePrefix + (rulePtr + 1) + myRule.Name, {
@@ -415,24 +508,24 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, showD
     function adjustFilterSuppressActionNodes() {
         for (let nodePtr = 0; nodePtr < nodeJSON.length; nodePtr++) {
             if (nodeJSON[nodePtr].id === "Filtered") {
-                nodeJSON[nodePtr].position.x = (maxColPtr * 300) + 500;
+                nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
                 nodeJSON[nodePtr].position.y = filterClauseCount !== 1
                     ? (filterClauseCount * ruleSpace) / 2
                     : (2 * ruleSpace) / 2 + 40;
             }
 
             if (nodeJSON[nodePtr].id === "Suppressed") {
-                nodeJSON[nodePtr].position.x = (maxColPtr * 300) + 500;
+                nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
                 nodeJSON[nodePtr].position.y = ((filterClauseCount * ruleSpace * 2) + (suppressionClauseCount * ruleSpace)) / 2;
             }
 
             if (nodeJSON[nodePtr].id === "Action") {
-                nodeJSON[nodePtr].position.x = (maxColPtr * 300) + 500;
+                nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
                 nodeJSON[nodePtr].position.y = (filterClauseCount * ruleSpace) + (suppressionClauseCount * ruleSpace) + ruleSpace + 40;
             }
 
             if (nodeJSON[nodePtr].id.startsWith("RP_")) {
-                nodeJSON[nodePtr].position.x = (maxColPtr * 300) + 500;
+                nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
             }
         }
     }
@@ -442,14 +535,14 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, showD
             const virtual = myCohorts[cohortPtr].Virtual && "Yy".indexOf(myCohorts[cohortPtr].Virtual) > -1;
             nodeJSON.push({
                 id: "CH_" + (cohortPtr + 1).toString(),
-                position: {x: (300 * cohortPtr), y: 0},
+                position: {x: (smallColPitch * cohortPtr), y: 0},
                 data: {
                     label: myCohorts[cohortPtr].CohortLabel + (showPriority ? " (" + myCohorts[cohortPtr].Priority.toString() + ")" : ""),
                     icon: virtual ? <VirtualCohortIcon/> : "",
                 },
                 type: "inputnode",
                 sourcePosition: Position.Bottom,
-                style: {width: "250px", background: 'blue', color: 'white'},
+                style: {width: smallWidth + "px", background: 'blue', color: 'white'},
             });
             edgeJSON.push(makeEdge("CH_" + (cohortPtr + 1).toString() + "-Start", "CH_" + (cohortPtr + 1).toString(), "1"));
             maxCohortPtr++;
@@ -506,7 +599,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, showD
 
             nodeJSON.push({
                 id: (rulePtr + 1).toString(),
-                position: {x: (300 * colPtr), y: ruleYOffset + (ruleSpace * clausePtr)},
+                position: {x: (smallColPitch * colPtr), y: ruleYOffset + (ruleSpace * clausePtr)},
                 data: {
                     label: nodeLabel,
                     icon: myRule.Type === "S" && nextRule.Priority !== myRule.Priority && myRule.RuleStop === "Y" ?
@@ -514,7 +607,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, showD
                 },
                 type: andRule ? "decision" : "leftdecision",
                 sourcePosition: Position.Bottom,
-                style: {width: "250px"},
+                style: {width: smallWidth + "px"},
             });
 
             if (rulePtr > 0) {
