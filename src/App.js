@@ -76,7 +76,7 @@ function App() {
             </div>
             <ReactFlow nodes={initialNodes} nodeTypes={nodeTypes} edges={initialEdges}>
                 <MiniMap zoomable pannable/>
-                <Controls></Controls>
+                <Controls/>
             </ReactFlow>
         </div>
     );
@@ -144,7 +144,7 @@ function buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule) {
 
         let myCohortLabel = "";
         const cohortLabelList = myRule.CohortLabel ? myRule.CohortLabel.split(',') : null;
-        if (myRule.CohortLabel && myRule.CohortLabel !== "") {
+        if (myRule.CohortLabel) {
             myCohortLabel = cohortLabelList.slice(0, 4).join('\n') + (cohortLabelList.length > 4 ? "(and more)" : "");
         }
 
@@ -168,6 +168,7 @@ function buildNodeLabel(myRule, showDetail, showPriority, rulePtr, lastRule) {
 }
 
 function buildRoutingLabel(CommsRouting, routingMap, showDetail) {
+    if (!CommsRouting) return '';
     return (CommsRouting + '|').split('|')
         .filter(rp => rp)
         .map(rp => {
@@ -216,7 +217,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority) {
 
     const edgeJSON = [makeEdge("0-1", "0", "1")];
 
-    let iterationArrray = [{value: "0", label: "Please select file"}];
+    let iterationArray = [{value: "0", label: "Please select file"}];
     let iterationPtr = 0;
 
     // Shared state accessed by nested functions and the return statement.
@@ -289,8 +290,8 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority) {
 
         const routingNodeTypes = {R: 'Action', X: 'Filtered', Y: 'Suppressed'};
 
-        const highestRuleClause = Math.max(...Object.values(routingRules.reduce((rules, rule) => {
-            rules[rule.Priority] = ++rules[rule.Priority] || 1;
+        const highestRuleClause = routingRules.length === 0 ? 1 : Math.max(...Object.values(routingRules.reduce((rules, rule) => {
+            rules[rule.Priority] = (rules[rule.Priority] ?? 0) + 1;
             return rules;
         }, {})));
 
@@ -376,7 +377,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority) {
                 nodeJSON[nodePtr].position.y = (filterClauseCount * ruleSpace) + (suppressionClauseCount * ruleSpace) + ruleSpace + 40;
             }
 
-            if (nodeJSON[nodePtr].id.substring(0, 3) === "RP_") {
+            if (nodeJSON[nodePtr].id.startsWith("RP_")) {
                 nodeJSON[nodePtr].position.x = (maxColPtr * 300) + 500;
             }
         }
@@ -403,7 +404,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority) {
 
     if (configJson.hasOwnProperty("CampaignConfig")) {
 
-        iterationArrray = configJson.CampaignConfig.Iterations.map(buildLabel);
+        iterationArray = configJson.CampaignConfig.Iterations.map(buildLabel);
 
         if (iteration.value !== "" && iteration.value !== "0") {
             iterationPtr = configJson.CampaignConfig.Iterations.findIndex(p => p.ID === iteration.value);
@@ -454,7 +455,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority) {
                 position: {x: (300 * colPtr), y: ruleYOffset + (ruleSpace * clausePtr)},
                 data: {
                     label: nodeLabel,
-                    icon: myRule.Type === "S" && nextRule.Priority !== myRule.Priority && myRule.RuleStop && myRule.RuleStop === "Y" ? <RuleStopIcon/> : "",
+                    icon: myRule.Type === "S" && nextRule.Priority !== myRule.Priority && myRule.RuleStop === "Y" ? <RuleStopIcon/> : "",
                 },
                 type: andRule ? "decision" : "leftdecision",
                 sourcePosition: Position.Bottom,
@@ -500,8 +501,8 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority) {
     return {
         nodes: nodeJSON,
         edges: edgeJSON,
-        iterations: iterationArrray,
-        iterationOption: iterationArrray[iterationPtr],
+        iterations: iterationArray,
+        iterationOption: iterationArray[iterationPtr],
         ruleHeight: clausePtr + 1,
         ruleWidth: (maxCohortPtr > (maxColPtr + routingColMax) ? maxCohortPtr : maxColPtr + routingColMax + 3) + 1,
     };

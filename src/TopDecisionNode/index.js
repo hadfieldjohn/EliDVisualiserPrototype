@@ -1,9 +1,9 @@
-import { Handle, NodeProps, Position} from "reactflow";
+import { Handle, Position} from "reactflow";
 
 export default function TopDecisionNode({id, data}) {
 
     return(
-        <div>
+        <div id={id}>
             <Handle type="target" id="T" position={Position.Top}/>
             <Handle type="target" id="R" position={Position.Right}/>
             <Handle type="target" id="TL" position={Position.Left}/>

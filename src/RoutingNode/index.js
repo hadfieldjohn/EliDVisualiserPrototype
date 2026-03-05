@@ -1,9 +1,9 @@
-import {Handle, NodeProps, Position} from "reactflow";
+import {Handle, Position} from "reactflow";
 
 export default function RoutingNode({id, data}) {
 
     return (
-        <div>
+        <div id={id}>
             <Handle type="target" id="TN" position={Position.Top}/>
             <div>
                 <table>
