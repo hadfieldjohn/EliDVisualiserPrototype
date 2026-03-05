@@ -6,7 +6,7 @@ export default function InputNode({id, data}) {
         <div id={id}>
             <div>
                 <label>
-                    {data.icon && <div className="icon">{data.icon}{data.label}</div>}
+                    {data.icon && <div className="icon" style={{fontWeight: 'bold'}}>{data.icon}{data.label}</div>}
                     {!data.icon && <div className="label" style={{fontWeight: 'bold'}}>{data.label}</div>}
                 </label>
             </div>
