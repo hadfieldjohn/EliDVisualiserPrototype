@@ -652,7 +652,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
     }
 
     return {
-        nodes: nodeJSON,
+        nodes: nodeJSON.filter(Boolean),
         edges: edgeJSON,
         iterations: iterationArray,
         iterationOption: iterationArray[iterationPtr],

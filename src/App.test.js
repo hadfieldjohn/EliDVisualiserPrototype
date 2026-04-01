@@ -1,3 +1,5 @@
+import {sortByKey, buildNodeLabel, buildRoutingLabel, parseConfigRules} from './App';
+
 // Mock reactflow — uses browser APIs not available in Jest/jsdom
 jest.mock('reactflow', () => ({
     __esModule: true,
@@ -13,7 +15,7 @@ jest.mock('reactflow', () => ({
 // Mock MarkDownNode to prevent react-markdown (ESM-only) from being loaded by Jest
 jest.mock('./MarkDownNode', () => ({__esModule: true, default: () => null}));
 
-import {sortByKey, buildNodeLabel, buildRoutingLabel, parseConfigRules} from './App';
+
 
 // Suppress the debug console.log inside buildNodeLabel
 let consoleSpy;
@@ -227,20 +229,20 @@ const UNSELECTED = {value: '0'};
 describe('parseConfigRules', () => {
     describe('with no CampaignConfig', () => {
         test('returns exactly the three terminal nodes', () => {
-            const result = parseConfigRules({}, '', false, false, false);
+            const result = parseConfigRules({}, '', false, false, 250, 200, false);
             expect(result.nodes).toHaveLength(3);
             expect(result.nodes.map(n => n.id)).toEqual(expect.arrayContaining(['Suppressed', 'Filtered', 'Action']));
         });
 
         test('returns the placeholder iteration list', () => {
-            const result = parseConfigRules({}, '', false, false, false);
+            const result = parseConfigRules({}, '', false, false, 250, 200, false);
             expect(result.iterations).toEqual([{value: '0', label: 'Please select file'}]);
         });
     });
 
     describe('iterations', () => {
         test('returns iteration list built from config', () => {
-            const result = parseConfigRules(makeMockConfig(), UNSELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig(), UNSELECTED, false, false, 250, 200, false);
             expect(result.iterations).toHaveLength(1);
             expect(result.iterations[0]).toEqual({value: 'IT001', label: 'Iteration One (2024-01-01)'});
         });
@@ -248,26 +250,26 @@ describe('parseConfigRules', () => {
 
     describe('Filter (F) rules', () => {
         test('single F-type rule creates a leftdecision node', () => {
-            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'F'})]), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'F'})]), SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === '1').type).toBe('leftdecision');
         });
 
         test('single F-type rule creates a Y edge to Filtered', () => {
-            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'F'})]), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'F'})]), SELECTED, false, false, 250, 200, false);
             const edge = result.edges.find(e => e.target === 'Filtered' && e.label === 'Y');
             expect(edge).toBeDefined();
         });
 
         test('two F-type rules with the same priority: second node is a decision (AND) node', () => {
             const rules = [makeRule({Type: 'F', Priority: 1}), makeRule({Type: 'F', Name: 'Rule2', Priority: 1})];
-            const result = parseConfigRules(makeMockConfig(rules), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig(rules), SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === '1').type).toBe('leftdecision');
             expect(result.nodes.find(n => n.id === '2').type).toBe('decision');
         });
 
         test('two F-type rules with different priorities are both leftdecision nodes', () => {
             const rules = [makeRule({Type: 'F', Priority: 1}), makeRule({Type: 'F', Name: 'Rule2', Priority: 2})];
-            const result = parseConfigRules(makeMockConfig(rules), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig(rules), SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === '1').type).toBe('leftdecision');
             expect(result.nodes.find(n => n.id === '2').type).toBe('leftdecision');
         });
@@ -275,28 +277,28 @@ describe('parseConfigRules', () => {
 
     describe('Suppression (S) rules', () => {
         test('single S-type rule creates a leftdecision node', () => {
-            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'S'})]), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'S'})]), SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === '1').type).toBe('leftdecision');
         });
 
         test('single S-type rule creates a Y edge to Suppressed', () => {
-            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'S'})]), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'S'})]), SELECTED, false, false, 250, 200, false);
             const edge = result.edges.find(e => e.target === 'Suppressed' && e.label === 'Y');
             expect(edge).toBeDefined();
         });
 
         test('S-type rule with RuleStop=Y gets the stop icon', () => {
-            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'S', RuleStop: 'Y'})]), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'S', RuleStop: 'Y'})]), SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === '1').data.icon).toBeTruthy();
         });
 
         test('S-type rule with RuleStop=N has an empty icon', () => {
-            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'S', RuleStop: 'N'})]), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'S', RuleStop: 'N'})]), SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === '1').data.icon).toBe('');
         });
 
         test('F-type rule with RuleStop=Y does not get the stop icon', () => {
-            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'F', RuleStop: 'Y'})]), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig([makeRule({Type: 'F', RuleStop: 'Y'})]), SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === '1').data.icon).toBe('');
         });
     });
@@ -304,7 +306,7 @@ describe('parseConfigRules', () => {
     describe('cohort input nodes', () => {
         test('cohort creates an inputnode with the correct label', () => {
             const config = makeMockConfig([], [{CohortLabel: 'My Cohort', Priority: 1, Virtual: 'N'}]);
-            const result = parseConfigRules(config, SELECTED, false, false, false);
+            const result = parseConfigRules(config, SELECTED, false, false, 250, 200, false);
             const node = result.nodes.find(n => n.id === 'CH_1');
             expect(node).toBeDefined();
             expect(node.type).toBe('inputnode');
@@ -313,19 +315,19 @@ describe('parseConfigRules', () => {
 
         test('virtual cohort (Virtual=Y) has a non-empty icon', () => {
             const config = makeMockConfig([], [{CohortLabel: 'Virtual', Priority: 1, Virtual: 'Y'}]);
-            const result = parseConfigRules(config, SELECTED, false, false, false);
+            const result = parseConfigRules(config, SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === 'CH_1').data.icon).toBeTruthy();
         });
 
         test('virtual cohort (Virtual=y) also has a non-empty icon', () => {
             const config = makeMockConfig([], [{CohortLabel: 'Virtual', Priority: 1, Virtual: 'y'}]);
-            const result = parseConfigRules(config, SELECTED, false, false, false);
+            const result = parseConfigRules(config, SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === 'CH_1').data.icon).toBeTruthy();
         });
 
         test('non-virtual cohort has an empty icon', () => {
             const config = makeMockConfig([], [{CohortLabel: 'Normal', Priority: 1, Virtual: 'N'}]);
-            const result = parseConfigRules(config, SELECTED, false, false, false);
+            const result = parseConfigRules(config, SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === 'CH_1').data.icon).toBe('');
         });
 
@@ -334,7 +336,7 @@ describe('parseConfigRules', () => {
                 {CohortLabel: 'CohortA', Priority: 1, Virtual: 'N'},
                 {CohortLabel: 'CohortB', Priority: 2, Virtual: 'N'},
             ];
-            const result = parseConfigRules(makeMockConfig([], cohorts), SELECTED, false, false, false);
+            const result = parseConfigRules(makeMockConfig([], cohorts), SELECTED, false, false, 250, 200, false);
             expect(result.nodes.find(n => n.id === 'CH_1')).toBeDefined();
             expect(result.nodes.find(n => n.id === 'CH_2')).toBeDefined();
         });
@@ -343,7 +345,7 @@ describe('parseConfigRules', () => {
     describe('Routing (R) rules', () => {
         test('R-type rule creates a topdecision node', () => {
             const config = makeMockConfig([makeRule({Type: 'R', Name: 'Route', CommsRouting: 'PlanA'})]);
-            const result = parseConfigRules(config, SELECTED, false, false, false);
+            const result = parseConfigRules(config, SELECTED, false, false, 250, 200, false);
             const node = result.nodes.find(n => n.id === 'RP_R_1');
             expect(node).toBeDefined();
             expect(node.type).toBe('topdecision');
@@ -351,7 +353,7 @@ describe('parseConfigRules', () => {
 
         test('R-type rule creates an edge from Action to the routing node', () => {
             const config = makeMockConfig([makeRule({Type: 'R', Name: 'Route', CommsRouting: 'PlanA'})]);
-            const result = parseConfigRules(config, SELECTED, false, false, false);
+            const result = parseConfigRules(config, SELECTED, false, false, 250, 200, false);
             expect(result.edges.find(e => e.source === 'Action' && e.target === 'RP_R_1')).toBeDefined();
         });
     });
