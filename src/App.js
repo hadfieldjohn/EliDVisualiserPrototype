@@ -348,14 +348,14 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
 
     function addDefaultRouting(selectedIterationPtr, routingType, routingNodeType, ruleColumn, ruleRow, lastRuleId, nodeXOffset, nodeYOffset, routingMap) {
         const targetRPPrefix = "DFRP_" + routingNodeType + "_";
-        let routingPlan = null;
+        let routingPlan = "Unknown";
 
-        if (configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting && configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting !== "") {
-            routingPlan = "";
+        if (routingType === "R" && configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting && configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting !== "") {
+            routingPlan = configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting;
+        } else if (routingType === "R" && configJson.CampaignConfig.DefaultCommsRouting && configJson.CampaignConfig.DefaultCommsRouting !== "") {
+            routingPlan = configJson.CampaignConfig.DefaultCommsRouting;
+        } else if ( routingType !== "R" ) {
             switch (routingType) {
-                case 'R':
-                    routingPlan = configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultCommsRouting;
-                    break;
                 case 'X':
                     routingPlan = configJson.CampaignConfig.Iterations[selectedIterationPtr].DefaultNotEligibleRouting;
                     break;
@@ -365,51 +365,31 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
                 default:
                     routingPlan = "Unknown";
             }
-
-            if (routingPlan && routingPlan !== '') {
-                const routingActions = buildRoutingLabel(routingPlan, routingMap, showDetail);
-                if (routingActions) {
-                    nodeJSON.push(makeRoutingActionNode(
-                        targetRPPrefix,
-                        nodeXOffset + (largeColPitch * ruleColumn),
-                        nodeYOffset + (ruleRow * ruleSpace) + ruleSpace,
-                        routingActions,
-                        largeWidth,
-                    ));
-                }
-            }
-        } else if (routingType === 'R') {
-            routingPlan = configJson.CampaignConfig.DefaultCommsRouting.replace(/\|/g, "\n");
-            nodeJSON.push({
-                id: targetRPPrefix,
-                position: {x: -75, y: ruleYOffset + (ruleSpace * (clausePtr + 1))},
-                data: {label: routingPlan},
-                type: "output",
-                targetPosition: Position.Top,
-                style: {background: 'green', color: 'white', width: largeWidth + "px", whitespace: 'pre-wrap'},
-            });
         }
 
-        if (routingPlan) {
+        if (routingPlan !== "Unknown" && routingPlan !== "") {
+            const routingActions = buildRoutingLabel(routingPlan, routingMap, showDetail);
+            if (routingActions) {
+                nodeJSON.push(makeRoutingActionNode(
+                    targetRPPrefix,
+                    nodeXOffset + (largeColPitch * ruleColumn),
+                    nodeYOffset + (ruleRow * ruleSpace) + ruleSpace,
+                    routingActions,
+                    largeWidth,
+                ));
+            }
+
             if (ruleColumn > 1) {
                 edgeJSON.push(makeEdge(lastRuleId + "- " + targetRPPrefix, lastRuleId, targetRPPrefix, {
-                    label: "else",
+                    //label: "N",
                     sourceHandle: "RS",
                     targetHandle: "T"
                 }));
             } else {
-                edgeJSON.push(makeEdge(targetRPPrefix, routingNodeType, targetRPPrefix, {
+                edgeJSON.push(makeEdge( targetRPPrefix + 'Default', routingNodeType, targetRPPrefix, {
                     sourceHandle: "Y",
                     targetHandle: "T"
                 }));
-            }
-
-            if (routingType === 'R') {
-                let lastRulePtr = myFandSRules.length;
-                do {
-                    lastRulePtr--;
-                    edgeJSON.push(makeEdge((lastRulePtr + 1).toString() + "- " + targetRPPrefix, (lastRulePtr + 1).toString(), 'Action', {label: "N"}));
-                } while (lastRulePtr > -1 && (lastRulePtr === 0 || myFandSRules[lastRulePtr].Priority === myFandSRules[lastRulePtr - 1].Priority));
             }
         }
     }
@@ -423,10 +403,11 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
             return rules;
         }, {})));
 
-        const anchorNode = nodeJSON.find(node => node.id === routingNodeTypes[routingType]);
+        const anchorNode = nodeJSON.find(node => node !== undefined && node.id === routingNodeTypes[routingType]);
+        const nodeYOffset = anchorNode?.position.y + 25;
+        const nodeXOffset = anchorNode?.position.x;
+
         const rulePrefix = 'RP_' + routingType + '_';
-        const nodeYOffset = anchorNode.position.y + 25;
-        const nodeXOffset = anchorNode.position.x;
         let ruleColumn = 1;
         let ruleRow = 0;
         let maxRuleRow = 0;
@@ -454,10 +435,11 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
                 style: {width: largeWidth + "px"},
             });
 
-            if (rulePtr === 0) {
+           if (rulePtr === 0) {
                 edgeJSON.push(makeEdge(routingNodeTypes[routingType] + "_" + rulePrefix + myRule.Name, routingNodeTypes[routingType], ruleId, {
                     targetHandle: "TL",
-                    sourceHandle: 'Y'
+                    sourceHandle: 'Y',
+                    label: "N"
                 }));
             }
 
@@ -474,14 +456,14 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
                 ));
 
                 edgeJSON.push(makeEdge((rulePtr + 1).toString() + rulePrefix + myRule.Name, rulePrefix + (rulePtr + 1).toString(), rulePrefix + (rulePtr + 1) + myRule.Name, {
-                    label: "Then",
+                    label: "Y",
                     sourceHandle: "B",
                     targetHandle: "T"
                 }));
 
                 if (nextRule.Type !== '?') {
                     edgeJSON.push(makeEdge(ruleId + myRule.Name, ruleId, rulePrefix + (rulePtr + 2).toString(), {
-                        label: "No",
+                        label: "N",
                         sourceHandle: "RS",
                         targetHandle: "TL"
                     }));
@@ -505,32 +487,34 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
         return [ruleColumn, maxRuleRow + 1];
     }
 
-    function adjustFilterSuppressActionNodes() {
+    function adjustFilterSuppressActionNodes(filterClausCount,suppressionClauseCount) {
         for (let nodePtr = 0; nodePtr < nodeJSON.length; nodePtr++) {
             if (nodeJSON[nodePtr].id === "Filtered") {
-                nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
-                nodeJSON[nodePtr].position.y = filterClauseCount !== 1
-                    ? (filterClauseCount * ruleSpace) / 2
-                    : (2 * ruleSpace) / 2 + 40;
-            }
-
-            if (nodeJSON[nodePtr].id === "Suppressed") {
-                nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
-                nodeJSON[nodePtr].position.y = ((filterClauseCount * ruleSpace * 2) + (suppressionClauseCount * ruleSpace)) / 2;
-            }
-
-            if (nodeJSON[nodePtr].id === "Action") {
+                if ( filterClausCount === 0) {
+                    delete nodeJSON[nodePtr];
+                } else {
+                    nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
+                    nodeJSON[nodePtr].position.y = filterClauseCount !== 1
+                        ? (filterClauseCount * ruleSpace) / 2
+                        : (2 * ruleSpace) / 2 + 40;
+                }
+            } else if (nodeJSON[nodePtr].id === "Suppressed")  {
+                if ( suppressionClauseCount === 0) {
+                    delete nodeJSON[nodePtr];
+                 } else {
+                    nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
+                    nodeJSON[nodePtr].position.y = ((filterClauseCount * ruleSpace * 2) + (suppressionClauseCount * ruleSpace)) / 2;
+                }
+            } else if (nodeJSON[nodePtr].id === "Action") {
                 nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
                 nodeJSON[nodePtr].position.y = (filterClauseCount * ruleSpace) + (suppressionClauseCount * ruleSpace) + ruleSpace + 40;
-            }
-
-            if (nodeJSON[nodePtr].id.startsWith("RP_")) {
+            } else if (nodeJSON[nodePtr].id.startsWith("RP_")) {
                 nodeJSON[nodePtr].position.x = (maxColPtr * smallColPitch) + 500;
             }
         }
     }
 
-    function addInputCohorts() {
+    function addInputCohorts(noRules) {
         for (let cohortPtr = 0; cohortPtr < myCohorts.length; cohortPtr++) {
             const virtual = myCohorts[cohortPtr].Virtual && "Yy".indexOf(myCohorts[cohortPtr].Virtual) > -1;
             nodeJSON.push({
@@ -544,7 +528,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
                 sourcePosition: Position.Bottom,
                 style: {width: smallWidth + "px", background: 'blue', color: 'white'},
             });
-            edgeJSON.push(makeEdge("CH_" + (cohortPtr + 1).toString() + "-Start", "CH_" + (cohortPtr + 1).toString(), "1"));
+            edgeJSON.push(makeEdge("CH_" + (cohortPtr + 1).toString() + "-Start", "CH_" + (cohortPtr + 1).toString(), noRules ? "Action" : "1"));
             maxCohortPtr++;
         }
     }
@@ -569,7 +553,7 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
         let lastRule = {Type: null, Priority: null};
         let lastRulePtr = 0;
 
-        addInputCohorts();
+        addInputCohorts(myFandSRules.length === 0);
 
         for (let rulePtr = 0; rulePtr < myFandSRules.length; rulePtr++) {
 
@@ -651,12 +635,20 @@ function parseConfigRules(configJson, iteration, showDetail, showPriority, nodeW
             }));
         }
 
-        adjustFilterSuppressActionNodes();
+        adjustFilterSuppressActionNodes(filterClauseCount,suppressionClauseCount);
 
         const [colsR] = addRoutingRules(iterationPtr, myRRules, 'R', myRoutingMap);
-        const [colsX] = addRoutingRules(iterationPtr, myXRules, 'X', myRoutingMap);
-        const [colsY] = addRoutingRules(iterationPtr, myYRules, 'Y', myRoutingMap);
+        const [colsX] = filterClauseCount > 0 ? addRoutingRules(iterationPtr, myXRules, 'X', myRoutingMap) : [0,1];
+        const [colsY] = suppressionClauseCount > 0 ? addRoutingRules(iterationPtr, myYRules, 'Y', myRoutingMap) : [0,1];
         routingColMax = Math.max(colsR, colsX, colsY);
+
+        // Add closing N to Action
+        lastRulePtr = myFandSRules.length;
+        do {
+            lastRulePtr--;
+            edgeJSON.push(makeEdge((lastRulePtr + 1).toString() + "- lastrule", (lastRulePtr + 1).toString(), 'Action', {label: "N"}));
+        } while (lastRulePtr > -1 && (lastRulePtr === 0 || myFandSRules[lastRulePtr].Priority === myFandSRules[lastRulePtr - 1].Priority));
+
     }
 
     return {
